@@ -1,0 +1,51 @@
+apiVersion: cloud.google.com/v1
+kind: BackendConfig
+metadata:
+  namespace: prod
+  name: app-cdn
+spec:
+  cdn:
+    enabled: true
+    cachePolicy:
+      includeHost: true
+      includeProtocol: true
+      includeQueryString: false
+
+---
+apiVersion: networking.k8s.io/v1beta1
+kind: Ingress
+metadata:
+  name: app-ingress
+  namespace: prod
+  annotations:
+    kubernetes.io/ingress.global-static-ip-name: isv-294607-static-ip
+    nginx.ingress.kubernetes.io/rewrite-target: /$1
+spec:
+  backend:
+    serviceName: web-service
+    servicePort: 80
+  rules:
+  - host: isv.app
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: web-service
+          servicePort: 80
+      - path: /api/*
+        backend:
+          serviceName: api-service
+          servicePort: 80
+  - host: cannary.isv.app
+    http:
+      paths:
+      - path: /*
+        backend:
+          serviceName: web-service-cannary
+          servicePort: 80
+      - path: /api/*
+        backend:
+          serviceName: api-service-cannary
+          servicePort: 80
+
+---

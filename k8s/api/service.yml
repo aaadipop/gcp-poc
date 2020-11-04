@@ -1,0 +1,16 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: api-service
+  namespace: prod
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+spec:
+  # type: NodePort
+  selector:
+    app: api
+    # env: dev
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8000

@@ -1,0 +1,82 @@
+# Istio needs to be installed in cluster
+#
+# This code is not fully tested
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: Gateway
+metadata:
+  name: kubeapp-gateway
+spec:
+  selector:
+    istio: ingressgateway # use istio default controller
+  servers:
+  - port:
+      number: 80
+      name: http
+      protocol: HTTP
+    hosts:
+    - "*"
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: VirtualService
+metadata:
+  name: kubeapp
+spec:
+  hosts:
+  - "*"
+  gateways:
+  - kubeapp-gateway
+  http:
+  - route:
+    - destination:
+        host: kubeapp
+        subset: v1
+      weight: 90
+    - destination:
+        host: kubeapp
+        subset: v2
+      weight: 10
+
+# Example with cookies based route decisions
+#
+# apiVersion: networking.istio.io/v1alpha3
+# kind: VirtualService
+# metadata:
+#   name: helloworld
+# spec:
+#   hosts:
+#     - helloworld
+#   http:
+#   - match:
+#     - headers:
+#         cookie:
+#           regex: "^(.*?;)?(email=[^;]*@some-company-name.com)(;.*)?$"
+#     route:
+#     - destination:
+#         host: helloworld
+#         subset: v1
+#       weight: 50
+#     - destination:
+#         host: helloworld
+#         subset: v2
+#       weight: 50
+#   - route:
+#     - destination:
+#         host: helloworld
+#         subset: v1
+
+---
+apiVersion: networking.istio.io/v1alpha3
+kind: DestinationRule
+metadata:
+  name: kubeapp
+spec:
+  host: kubeapp
+  subsets:
+  - name: v1
+    labels:
+      version: v1
+  - name: v2
+    labels:
+      version: v2

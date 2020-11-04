@@ -1,0 +1,71 @@
+# Pipeline steps list
+stages:
+  - test
+  - build
+  - cannary
+  - deploy
+
+test:
+  stage: test
+  image: node:latest
+  cache:
+    paths:
+      - node_modules/
+  script:
+    - npm install
+    - npm test
+
+build-push:
+  stage: build
+  image: docker:latest
+  services:
+    - docker:dind
+  before_script:
+    # Login to Google Cloud Registry
+    - base64 -d $GCP_SA_KEY | docker login -u _json_key --password-stdin https://gcr.io
+
+  script:
+    - docker build -t gcr.io/$PROJECT_ID/api:$CI_COMMIT_TITLE -t gcr.io/$PROJECT_ID/api:latest .
+    - docker push gcr.io/$PROJECT_ID/api:$CI_COMMIT_TITLE
+    - docker push gcr.io/$PROJECT_ID/api:latest
+  # only:
+  #   - tags
+
+cannary:
+  stage: cannary
+  image: google/cloud-sdk
+  services:
+  - docker:dind
+  before_script:
+    # Login to Google Cloud
+    - gcloud auth activate-service-account $GCP_SA --key-file=$GOOGLE_CLOUD_ACCOUNT
+    - gcloud config set project $PROJECT_ID
+    - gcloud config set compute/zone europe-west4
+    - gcloud container clusters get-credentials $PROJECT_ID-gke-cluster-2ab5 --zone europe-west4 --project $PROJECT_ID
+    - kubectl config current-context
+  script:
+  # Make gcloud available
+  - source /root/.bashrc
+  - gcloud container clusters list
+  - kubectl get ns
+  - sed -e "s|GIT_VERSION|$CI_COMMIT_TITLE|g" ./k8s/cannary.yml | kubectl apply -f -
+
+deploy:
+  stage: deploy
+  image: google/cloud-sdk
+  services:
+  - docker:dind
+  before_script:
+    # Login to Google Cloud
+    - gcloud auth activate-service-account $GCP_SA --key-file=$GOOGLE_CLOUD_ACCOUNT
+    - gcloud config set project $PROJECT_ID
+    - gcloud config set compute/zone europe-west4
+    - gcloud container clusters get-credentials $PROJECT_ID-gke-cluster-2ab5 --zone europe-west4 --project $PROJECT_ID
+    - kubectl config current-context
+  script:
+  # Make gcloud available
+  - source /root/.bashrc
+  - gcloud container clusters list
+  - kubectl get ns
+  - sed -e "s|GIT_VERSION|$CI_COMMIT_TITLE|g" ./k8s/deploy.yml | kubectl apply -f -
+  when: manual

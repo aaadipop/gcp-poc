@@ -1,0 +1,116 @@
+# ----- api
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: web-cannary
+  namespace: prod
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: web-cannary
+  template:
+    metadata:
+      labels:
+        app: web-cannary
+    spec:
+      containers:
+        - name: web-cannary
+          image: gcr.io/isv-294607/web:latest
+          ports:
+            - containerPort: 8080
+              protocol: TCP
+          envFrom:
+          - configMapRef:
+              name: web-cm
+          env:
+          - name: API_HOST
+            value: "http://api-service-cannary"
+          - name: API_VERSION
+            value: "GIT_VERSION"
+          imagePullPolicy: Always
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8080
+              scheme: HTTP
+
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: api-cannary
+  namespace: prod
+spec:
+  replicas: 1
+  strategy:
+    type: RollingUpdate
+    rollingUpdate:
+      maxUnavailable: 1
+  selector:
+    matchLabels:
+      app: api-cannary
+  template:
+    metadata:
+      labels:
+        app: api-cannary
+    spec:
+      containers:
+        - name: api-cannary
+          image: gcr.io/isv-294607/api:latest
+          ports:
+            - containerPort: 8000
+          envFrom:
+          - configMapRef:
+              name: api-cm
+          - secretRef:
+              name: api-secret
+          env:
+          - name: API_VERSION
+            value: "GIT_VERSION"
+          imagePullPolicy: Always
+          readinessProbe:
+            failureThreshold: 3
+            httpGet:
+              path: /health
+              port: 8000
+              scheme: HTTP
+
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: web-service-cannary
+#   namespace: prod
+#   annotations:
+#     cloud.google.com/neg: '{"ingress": true}'
+#     cloud.google.com/backend-config: '{"ports": {"80":"app-cdn"}}'
+# spec:
+#   selector:
+#     app: web-cannary
+#   ports:
+#     - port: 80
+#       protocol: TCP
+#       targetPort: 8080
+#
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: api-service-cannary
+#   namespace: prod
+#   annotations:
+#     cloud.google.com/neg: '{"ingress": true}'
+# spec:
+#   selector:
+#     app: api-cannary
+#   ports:
+#     - port: 80
+#       protocol: TCP
+#       targetPort: 8000

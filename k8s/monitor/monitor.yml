@@ -1,0 +1,111 @@
+# kind: Namespace
+# apiVersion: v1
+# metadata:
+#   name: kube-monitoring
+#
+# ---
+# apiVersion: v1
+# kind: Service
+# metadata:
+#   name: monitoring-env-svc
+#   namespace: kube-monitoring
+# spec:
+#   type: NodePort
+#   selector:
+#     pod: prom-graf-pod
+#
+#   ports:
+#   - port: 9090
+#     protocol: TCP
+#     name: prom-port
+#   - port: 3000
+#     protocol: TCP
+#     name: graf-port
+#
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: prometheus-pvc
+#   namespace: kube-monitoring
+#   labels:
+#     name: prompvc
+# spec:
+#   accessModes:
+#    - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 1Gi
+#
+# ---
+# apiVersion: v1
+# kind: PersistentVolumeClaim
+# metadata:
+#   name: grafana-pvc
+#   namespace: kube-monitoring
+#   labels:
+#     name: graf-pvc
+# spec:
+#   accessModes:
+#    - ReadWriteOnce
+#   resources:
+#     requests:
+#       storage: 1Gi
+#
+# ---
+# apiVersion: apps/v1
+# kind: Deployment
+# metadata:
+#   name: monitoring-env-dep
+#   namespace: kube-monitoring
+# spec:
+#   selector:
+#     matchLabels:
+#       pod: prom-graf-pod
+#
+#   replicas: 1
+#   template:
+#     metadata:
+#       labels:
+#         pod: prom-graf-pod
+#
+#     spec:
+#       containers:
+#       - name: prometheus
+#         image: prom/prometheus
+#         ports:
+#         - containerPort: 9090
+#
+#         volumeMounts:
+#           - name: prom-vol
+#             mountPath: /data/
+#
+#
+#       - name: grafana
+#         image: grafana/grafana
+#
+#         ports:
+#         - containerPort: 3000
+#
+#         volumeMounts:
+#           - name: graf-vol
+#             mountPath: /var/lib/grafana/
+#
+#         env:
+#           - name: GF_SECURITY_ADMIN_USER
+#             value: admin
+#           - name: GF_SECURITY_ADMIN_PASSWORD
+#             value: admin
+#
+#         # securityContext:
+#         #   runAsUser: 472
+#         #   fsGroup: 472
+#
+#       volumes:
+#       - name: prom-vol
+#         persistentVolumeClaim:
+#           claimName: prometheus-pvc
+#
+#       - name: graf-vol
+#         persistentVolumeClaim:
+#           claimName: grafana-pvc

@@ -1,0 +1,17 @@
+apiVersion: v1
+kind: Service
+metadata:
+  name: web-service
+  namespace: prod
+  annotations:
+    cloud.google.com/neg: '{"ingress": true}'
+    cloud.google.com/backend-config: '{"ports": {"80":"app-cdn"}}'
+spec:
+  # type: NodePort
+  selector:
+    app: web
+    # env: dev
+  ports:
+    - port: 80
+      protocol: TCP
+      targetPort: 8080
