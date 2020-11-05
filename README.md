@@ -1,5 +1,5 @@
 ## Disclaimer
-This project is a proof of concept based on our perception about how a cloud infrastructure should be so it not guarantee any best practices nor any 'ready to production' examples.  
+This project is a proof of concept based on our perception about how a start-up cloud infrastructure should be so it not guarantee any best practices nor any 'ready to production' examples.  
 Because the project is a bit too complex and has many concepts, the documentation does not fully cover them.  
 https://iservit.ro/tutorial/gcp-infrastucture-overview/
 # Requirement:
@@ -27,14 +27,17 @@ the infrastructure should present relevant
 # Design
 > arch.png illustrates the project overview  
 
-We choose Google Cloud to implement this infrastructure. The infrastructure will be provisioned with Terraform, database tier will be two PostgreSQL db instances which resides in different zones for high availability, backed up daily and have a 'Point in time recovery' enabled.  
-The computational power will be served through a Google Kubernetes Engine in a single namespace for production, having a simple ingress to manage traffic between live and cannary deploys.  
-Logging will be managed with fluentd and displayed through Kibana.  
+We choose Google Cloud to implement this infrastructure. The infrastructure will be provisioned with Terraform, database tier consist of a PostgreSQL Cloud instance which reside in two different zones for high availability, backed up daily and have 'Point in time recovery' enabled.  
+
+The computational power will be served through a Google Kubernetes Engine consist of three nodes with autoscale enabled. The cluster have a single namespace for production(can be added if needed), one for logging and one for monitoring. A simple ingress to manage traffic between live and cannary deploys and a backend for serving static assets through CDN wired to web-app Service. For variables and database password are created two ConfigMap's and one Secret which are provided by Terraform.
+Logs will be collected by Fluentd, stored in Elasticsearch and displayed through Kibana.
 Monitoring is setted up with Prometheus and Grafana.  
+
 Despite that we host this code on GitHub, the CI/CD pipeline is built for GitLab. The `.gitlab-ci.yml` have some basic stages to build and push the image to Google Cloud Registry and deploy it to k8s. More info's here -> https://iservit.ro/tutorial/gitlab-ci-cd-pipeline-push-image-to-grc-and-cannary-deploy-to-gke-gcp-infrastructure-overview/
 
 # Project setup
-The following settings are tested on MacOS environment
+The following settings are tested on MacOS environment and for a fully functional infrastructure all steps presented in Readme.md are required. We encourage you to get a simple Docker image with your app to build a real scenario or you can use the simple go app from the pipeline's repo.  
+
 > For a fully functional infrastructure all steps are required
 
 1. install Cloud SDK which contains gcloud and kubectl
